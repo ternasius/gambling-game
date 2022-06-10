@@ -1,6 +1,6 @@
 # gambling-game
 
-**USE PYTHON 3.10+**
+**USE PYTHON 3.10+**\n
 **GAME HAS NOT BEEN BALANCED - EXPECT IT TO BE EITHER SUPER EASY OR SUPER HARD**
 
 Premise of the game is to roll slots to get enough money to pass each threshold.
