@@ -4,12 +4,10 @@ idea:
 - at end of each set of rolls, player will need variable amount of money to progress, otherwise fail
 - player can buy power-ups with money to make numbers give more money
 - game can continue on infinitely
-
 gameplay:
 - game has 5 number slots to roll, beginning from 0-9
 - game checks every 10 rolls to see if player is past threshold, threshold gets exponentially larger
 - shop will have power-ups to boost numbers, increase odds of certain numbers, etc
-
 shop:
 - power-ups:
     - xN: multiplies all number values by N for one slot
@@ -156,7 +154,10 @@ def check_threshold():
 # string list with all possible power-ups
 # another string list with all modifiers still available (haven't been bought yet)
 # player will have a dict with all modifiers bought
-def shop(reset=False, pos=-1):
+_pos = -1
+
+
+def shop(reset=False):
     global shop_list, reset_cost, money
 
     if reset:
@@ -175,9 +176,9 @@ def shop(reset=False, pos=-1):
     cur_item = ""
     cur_item_price = 0
 
-    if pos > -1:
-        shop_dict.pop(shop_list[pos])
-        shop_list.pop(pos)
+    if _pos > -1:
+        shop_dict.pop(shop_list[_pos])
+        shop_list.pop(_pos)
 
         shop_list.append("")
 
@@ -202,8 +203,9 @@ def shop(reset=False, pos=-1):
                 is_dupe = check_dupe(cur_item, i)
 
                 shop_dict[shop_list[i]] = cur_item_price
-            i += 1
-
+        i += 1
+    print(shop_list)
+    print(shop_dict)
     # update prices every time shop() is called
     for j in range(len(shop_dict)):
         in_pow = False
@@ -235,7 +237,7 @@ def shop(reset=False, pos=-1):
 
 # returns price
 def buy_item(pos):
-    global money
+    global money, _pos
     adjusted_pos = pos - 1
     item = shop_list[adjusted_pos]
     price = shop_dict[shop_list[adjusted_pos]]
@@ -332,8 +334,7 @@ def buy_item(pos):
                 mod_dict["isDuplicate"] = True
             # endregion
         money -= price
-
-        shop(pos=adjusted_pos)
+        _pos = adjusted_pos
     else:
         print("not enough money")
 
