@@ -25,13 +25,13 @@ shop:
                    if N values are the same, multiply sum of rolls by 4**N
     -
 """
-import math
 import os
 import random
 import sys
 import time
 
 from numpy.random import choice
+from modifiers import *
 
 
 class Slot:
@@ -42,36 +42,36 @@ class Slot:
     def roll(self):
         return choice(self.nums, p=self.probability)
 
-    def multiply_slot(self, mult):
+    def multiply_slot(self, mult: float) -> None:
         for i in range(len(self.nums)):
             self.nums[i] *= mult
 
-    def add_slot(self, add):
+    def add_slot(self, add: float) -> None:
         for i in range(len(self.nums)):
             self.nums[i] += add
 
-    def multiply_num(self, mult, index):
+    def multiply_num(self, mult: float, index: int) -> None:
         self.nums[index] *= mult
 
-    def add_num(self, add, index):
+    def add_num(self, add: float, index: int) -> None:
         self.nums[index] += add
 
-    def set_num(self, set_n, index):
+    def set_num(self, set_n: [int, float], index: int) -> None:
         self.nums[index] = set_n
 
-    def add_percent(self, prob, index):  # doesn't add up to 1, doesn't matter
-        new_prob = self.probability[index] + prob
-        remainder = 1 - new_prob
+    def add_percent(self, prob: float, index: int) -> None:
+        self.probability[index] += prob
 
         for i in range(len(self.probability)):
-            self.probability[i] *= remainder + (remainder / 9)
+            if self.probability[i] != index:
+                self.probability[i] -= prob / 9
 
 
 pow_list = ["x2", "x3", "x5", "x9", "x10", "x20", "x25",   # xN
-            "x10(1)", "x25(1)", "x50(1)", "x100(1)",       # xN(1)
+            "x(1)10", "x(1)25", "x(1)50", "x(1)100",       # xN(1)
             "+5", "+10", "+25", "+50",                     # +N
-            "+25(1)", "+50(1)", "+100(1)", "+250(1)",      # +N(1)
-            "+2%", "+5%", "+10%", "+20%", "+25%", "+50%",  # +X%
+            "+(1)25", "+(1)50", "+(1)100", "+(1)250",      # +N(1)
+            "+%2", "+%5", "+%10", "+%20", "+%25", "+%50",  # +X%
             "=25", "=50", "=100", "=250", "=1000"]         # =N
 
 mod_list = ["isPrime", "inOrder", "inReverse", "pythagorean", "isEven", "isOdd", "isDuplicate"]
@@ -85,10 +85,10 @@ mod_dict = {"isPrime": False,
             "isDuplicate": False}
 
 pow_price_dict = {"x2": 5, "x3": 10, "x5": 40, "x9": 100, "x10": 150, "x20": 350, "x25": 500,
-                  "x10(1)": 10, "x25(1)": 30, "x50(1)": 75, "x100(1)": 200,
+                  "x(1)10": 10, "x(1)25": 30, "x(1)50": 75, "x(1)100": 200,
                   "+5": 30, "+10": 75, "+25": 300, "+50": 1000,
-                  "+25(1)": 50, "+50(1)": 125, "+100(1)": 350, "+250(1)": 1200,
-                  "+2%": 200, "+5%": 650, "+10%": 1500, "+20%": 3500, "+25%": 5000, "+50%": 12500,
+                  "+(1)25": 50, "+(1)50": 125, "+(1)100": 350, "+(1)250": 1200,
+                  "+%2": 200, "+%5": 650, "+%10": 1500, "+%20": 3500, "+%25": 5000, "+%50": 12500,
                   "=25": 40, "=50": 100, "=100": 250, "=250": 700, "=1000": 3000}
 
 
@@ -118,10 +118,11 @@ for slot in range(5):  # creates 5 Slot objects
 
 # equation for threshold levels
 def threshold_eq():  # temporary, will balance later
-    return round(((level ** 2) + 100) * (level ** 0.25))
+    return round(((level ** 2) + 100) * (level ** 1))
 
 
 # equation for shop prices
+
 def price_eq():  # temporary, will balance later
     return 1 + (2 ** (roll_count / 30))
 
@@ -139,11 +140,12 @@ def check_dupe(item, count):
 
 # check if player has enough money every 10 rolls
 def check_threshold():
-    global level
+    global level, money
     os.system("cls")
     if roll_count % 10 == 0:
         if money >= threshold_eq():
             print("you pass this level")
+            money -= threshold_eq()
             level += 1
         else:
             print("you fail")
@@ -204,8 +206,7 @@ def shop(reset=False):
 
                 shop_dict[shop_list[i]] = cur_item_price
         i += 1
-    print(shop_list)
-    print(shop_dict)
+
     # update prices every time shop() is called
     for j in range(len(shop_dict)):
         in_pow = False
@@ -219,7 +220,10 @@ def shop(reset=False):
                 if shop_list[j] == mod_list[m]:
                     shop_dict[shop_list[j]] = round(mod_price_dict.get(shop_list[j]) * price_eq())
 
-    print(shop_dict)
+    i = 1
+    for item in shop_dict:
+        print(f"{i}: {item} - {shop_dict[item]}")
+        i += 1
 
     valid_nums = False
 
@@ -245,77 +249,19 @@ def buy_item(pos):
     if money >= price:
         # cases for each upgrade
         match item:
-            # region cases for xN power-ups
-            case "x2":
-                apply_slot("*", 2)
-            case "x3":
-                apply_slot("*", 3)
-            case "x5":
-                apply_slot("*", 5)
-            case "x9":
-                apply_slot("*", 9)
-            case "x10":
-                apply_slot("*", 10)
-            case "x20":
-                apply_slot("*", 20)
-            case "x25":
-                apply_slot("*", 25)
-            # endregion
-            # region cases for xN(1) power-ups
-            case "x10(1)":
-                apply_num("*", 10)
-            case "x25(1)":
-                apply_num("*", 25)
-            case "x50(1)":
-                apply_num("*", 50)
-            case "x100(1)":
-                apply_num("*", 100)
-            # endregion
-            # region cases for +N power-ups
-            case "+5":
-                apply_slot("+", 5)
-            case "+10":
-                apply_slot("+", 10)
-            case "+25":
-                apply_slot("+", 25)
-            case "+50":
-                apply_slot("+", 50)
-            # endregion
-            # region cases for +N(1) power-ups
-            case "+25(1)":
-                apply_num("+", 25)
-            case "+50(1)":
-                apply_num("+", 50)
-            case "+100(1)":
-                apply_num("+", 100)
-            case "+250(1)":
-                apply_num("+", 250)
-            # endregion
-            # region cases for +X% power-ups
-            case "+2%":
-                apply_num("%", 0.02)
-            case "+5%":
-                apply_num("%", 0.05)
-            case "+10%":
-                apply_num("%", 0.1)
-            case "+20%":
-                apply_num("%", 0.2)
-            case "+25%":
-                apply_num("%", 0.25)
-            case "+50%":
-                apply_num("%", 0.5)
-            # endregion
-            # region cases for =N power-ups
-            case "=25":
-                apply_num("=", 25)
-            case "=50":
-                apply_num("=", 50)
-            case "=100":
-                apply_num("=", 100)
-            case "=250":
-                apply_num("=", 250)
-            case "=1000":
-                apply_num("=", 1000)
+            # region cases for power-ups
+            case ("x2" | "x3" | "x5" | "x9" | "x10" | "x20" | "x25"):
+                apply_slot("*", int(item[1:]))
+            case ("x(1)10" | "x(1)25" | "x(1)50" | "x(1)100"):
+                apply_num("*", int(item[4:]))
+            case ("+5" | "+10" | "+25" | "+50"):
+                apply_slot("+", int(item[1:]))
+            case ("+(1)25" | "+(1)50" | "+(1)100" | "+(1)250"):
+                apply_num("+", int(item[4:]))
+            case ("+%2" | "+%5" | "+%10" | "+%20" | "+%25" | "+%50"):
+                apply_num("%", int(item[2:]) / 100)
+            case ("=25" | "=50" | "=100" | "=250" | "=1000"):
+                apply_num("=", int(item[1:]))
             # endregion
             # region cases for modifiers
             case "isPrime":
@@ -339,7 +285,7 @@ def buy_item(pos):
         print("not enough money")
 
 
-def apply_slot(operator, num):
+def apply_slot(operator: str, num: float) -> None:
     in_range = False
     i = 0
     while not in_range:
@@ -357,7 +303,7 @@ def apply_slot(operator, num):
         _slot.add_slot(num)
 
 
-def apply_num(operator, num):
+def apply_num(operator: str, num: float) -> None:
     in_range_slot = False
     in_range_num = False
     slot_n = 0
@@ -406,85 +352,6 @@ def apply_mods(roll_lst):
         mult *= is_duplicate(roll_lst)
 
     return mult
-
-
-def is_prime(roll_lst):
-    count = 0
-    for roll in roll_lst:
-        prime = True
-        for i in range(2, round(math.sqrt(roll))):
-            if roll % i == 0:
-                prime = False
-        if prime:
-            count += 1
-    count += 1  # this is the "+1" in "N+1"
-
-    return count
-
-
-def in_order(roll_lst):
-    minimum = 0
-    for roll in roll_lst:
-        if roll < minimum:
-            return 1
-        minimum = roll
-    return 10
-
-
-def in_reverse(roll_lst):
-    maximum = float("inf")
-    for roll in roll_lst:
-        if roll > maximum:
-            return 1
-        maximum = roll
-    return 10
-
-
-def pythagorean(roll_lst):
-    for i in range(len(roll_lst) - 1):
-        for j in range(1, len(roll_lst)):
-            num1 = roll_lst[i]
-            num2 = roll_lst[j]
-            for k in range(len(roll_lst)):
-                if abs((num1 ** 2) - (num2 ** 2)) == roll_lst[k]:
-                    return 20
-    return 1
-
-
-def is_even(roll_lst):
-    count = 0
-    for roll in roll_lst:
-        if roll % 2 == 0:
-            count += 1
-    if count >= 2:
-        return 2
-
-    return 1
-
-
-def is_odd(roll_lst):
-    count = 0
-    for roll in roll_lst:
-        if roll % 2 != 0:
-            count += 1
-    if count >= 2:
-        return 2
-
-    return 1
-
-
-def is_duplicate(roll_lst):
-    maximum = 0
-    for roll1 in roll_lst:
-        count = 0
-        for roll2 in roll_lst:
-            if roll1 == roll2:
-                count += 1
-        if count > maximum:
-            maximum = count
-    if maximum >= 2:
-        return 4 ** maximum
-    return 1
 
 
 # main
